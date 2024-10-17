@@ -1284,6 +1284,16 @@ cluster:
         help: Paste in a Personal Access Token from the Linode <a href="https://cloud.linode.com/profile/tokens" target="_blank" rel="noopener noreferrer nofollow">API Tokens</a> screen.
         label: Access Token
         placeholder: Your Linode API Access Token
+    incus:
+      url:
+        label: Incus API Server
+        placeholder: https://incus.host:8443
+      tlsClientCert:
+        label: Client Certificate
+      tlsClientKey:
+        label: Client Private Key
+      note1: Generate your self signed certificate with openssl <small><i>(openssl req -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -nodes -new -x509 -days 365 -keyout key.pem -out cert.pem)</i></small>
+      note2: And add it to your incus trust list <small><i>(incus config trust add-certificate cert.pem --name rancher)</i></small>
     pnap:
       clientIdentifier:
         label: Client ID
@@ -1904,6 +1914,7 @@ cluster:
     huaweicce: Huawei CCE
     import: Generic
     imported: Imported
+    incus: Incus
     k3s: K3s
     kubeAdmin: KubeADM
     linode: Linode

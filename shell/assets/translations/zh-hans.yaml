@@ -1782,6 +1782,7 @@ cluster:
     huaweicce: 华为 CCE
     import: 通用
     imported: 已导入
+    incus: Incus
     k3s: K3s
     kubeAdmin: KubeADM
     linode: Linode

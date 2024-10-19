@@ -1584,6 +1584,18 @@ cluster:
           =1 {# vCPU}
           other {# vCPUs}
         }, {disk} GB Disk ({value})
+    incus:
+      label: Instance Option
+      description:  Choose the size and base image of the virtual machine
+      project: Project
+      profile: Profile
+      cpus: CPUs
+      memory: Memory
+      disk: Disk
+      storagePool: Storage Pool
+      network: Network
+      baseImage: Base Image
+      cloudInit: Cloud Config YAML
     vsphere:
       hostOptions:
         any: Any

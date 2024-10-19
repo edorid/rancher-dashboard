@@ -1,0 +1,48 @@
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+    - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
+name: Upload Release Asset
+jobs:
+  build-and-upload-embedded:
+    name: Build & Upload Embedded
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+        # Note - Cannot use the setup action here as it uses a different yarn install arg
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '14.x'
+          cache: 'yarn'
+
+        # Build a tar that will be picked up by rancher builds and embedded into it
+      - id: build-embedded
+        name: Build Embedded
+        run: ./scripts/build-embedded
+        env:
+          EMBED_PKG: https://releases.rancher.com/harvester-ui/plugin/harvester-1.0.3.tar.gz
+          
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+          
+      - name: Upload Release Asset
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: ${{steps.build-embedded.outputs.BUILD_EMBEDED_TGZ}}

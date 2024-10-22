@@ -11,11 +11,10 @@ import KeyValue from '@shell/components/form/KeyValue';
 import { LabeledInput } from '@components/Form/LabeledInput';
 import ArrayListSelect from '@shell/components/form/ArrayListSelect';
 import YamlEditor from '@shell/components/YamlEditor';
-import { get, set } from '@shell/utils/object';
-import { integerString, keyValueStrings } from '@shell/utils/computed';
+import { set } from '@shell/utils/object';
+import { integerString } from '@shell/utils/computed';
 import { _CREATE, _EDIT, _VIEW } from '@shell/config/query-params';
 
-const NULLABLE_EMPTY_FIELDS = ['imageNames', 'profiles'];
 export const SENTINEL = '__SENTINEL__';
 export const DEFAULT_VALUES = {
   cpuCount: '2',
@@ -24,19 +23,6 @@ export const DEFAULT_VALUES = {
   cloudConfig: '#cloud-config\n\n',
   project: 'default',
   profile: 'default'
-};
-
-const stringsToParams = (params, str) => {
-  const index = str.indexOf('=');
-
-  if (index > -1) {
-    params.push({
-      key: str.slice(0, index),
-      value: str.slice(index + 1),
-    });
-  }
-
-  return params;
 };
 
 /**
@@ -63,11 +49,6 @@ function createOptionHelpers(name) {
   };
 }
 
-const errorActions = Object.freeze({
-  CREATE: 'create',
-  DELETE: 'delete',
-});
-
 export default {
   components: {
     ArrayListSelect, Card, KeyValue, Loading, LabeledInput, LabeledSelect, Banner, UnitInput, RadioGroup, YamlEditor
@@ -77,7 +58,7 @@ export default {
 
   props: {
     poolId: {
-      type:    String,
+      type: String,
       default: '',
     },
     credentialId: {
@@ -89,7 +70,7 @@ export default {
       default: false,
     },
     poolCreateMode: {
-      type:     Boolean,
+      type: Boolean,
       required: true,
     },
   },
@@ -157,10 +138,6 @@ export default {
     cpuCount: integerString('value.cpuCount'),
     memorySize: integerString('value.memorySize'),
     diskSize: integerString('value.diskSize'),
-
-    showCloudConfigYaml() {
-      return this.value.creationType !== 'legacy';
-    },
   },
 
   watch: {
@@ -212,49 +189,7 @@ export default {
         };
       });
     },
-    
-    manageErrors(action = errorActions.CREATE, key) {
-      if (action === errorActions.CREATE) {
-        const keys = [key, ...(this.validationErrors[this.poolId] || [])];
 
-        this.validationErrors = Object.assign({}, this.validationErrors, { [this.poolId]: keys });
-      }
-
-      if (action === errorActions.DELETE && this.validationErrors[this.poolId]) {
-        this.validationErrors = Object.assign({}, this.validationErrors, { [this.poolId]: this.validationErrors[this.poolId].filter((x) => x === key) });
-      }
-    },
-    
-    resetValueIfNecessary(key, content, options, isArray = false) {
-      const isValueInContent = () => {
-        if (isArray) {
-          return this.value[key]?.every((value) => content.find((c) => c.value === value));
-        }
-
-        return content.find((c) => c.value === this.value[key]);
-      };
-
-      if (!isValueInContent()) {
-        const value = isArray ? [] : content[0]?.value;
-        const isNullOrEmpty = NULLABLE_EMPTY_FIELDS.includes(key) && (this.value[key] === null || this.value[key] === '');
-        const shouldHandleError =
-          [_EDIT, _VIEW].includes(this.mode) && // error messages should only be displayed in Edit or View mode
-          !this.poolCreateMode && // almost identical to Create mode
-          !isNullOrEmpty && // null and empty string are valid values for some fields e.g. contentLibrary, folder and hostsystem
-          !isArray; // this flag is used for network and tag fields, and should not display error for them
-
-        if ((this.mode === _CREATE || this.poolCreateMode) && value !== SENTINEL) {
-          set(this.value, key, value);
-        }
-
-        if (shouldHandleError) {
-          this.manageErrors(errorActions.CREATE, key);
-        }
-      } else {
-        this.manageErrors(errorActions.DELETE, key);
-      }
-    },
-    
     loadAllProjectResources() {
       this.loadImageNames();
       this.loadProfiles();
@@ -265,19 +200,6 @@ export default {
     async loadProjects() {
       const options = await this.requestOptions('projects');
       const content = this.mapPathOptionsToContent(options);
-      const valueInContent = content.find((c) => c.value === this.value.project);
-
-      if (!valueInContent) {
-        if (this.mode === _CREATE || this.poolCreateMode) {
-          set(this.value, 'project', options[0]);
-        }
-
-        if ([_EDIT, _VIEW].includes(this.mode) && !this.poolCreateMode) {
-          this.manageErrors(errorActions.CREATE, 'project');
-        }
-      } else {
-        this.manageErrors(errorActions.DELETE, 'project');
-      }
 
       set(this, 'projectsResults', content);
     },
@@ -288,40 +210,32 @@ export default {
       const options = await this.requestOptions('images', this.value.project);
       const content = this.mapPathOptionsToContent(options);
 
-      this.resetValueIfNecessary('imageNames', content, options);
-
       set(this, 'imageNamesResults', content);
     },
-    
+
     async loadProfiles() {
       set(this, 'profilesResults', null);
 
       const options = await this.requestOptions('profiles', this.value.project);
       const content = this.mapPathOptionsToContent(options);
 
-      this.resetValueIfNecessary('profiles', content, options);
-
       set(this, 'profilesResults', content);
     },
-    
+
     async loadStorageNames() {
       set(this, 'storageNamesResults', null);
 
       const options = await this.requestOptions('storages', this.value.project);
       const content = this.mapPathOptionsToContent(options);
 
-      this.resetValueIfNecessary('storageNames', content, options);
-
       set(this, 'storageNamesResults', content);
     },
-    
+
     async loadNetworkNames() {
       set(this, 'networkNamesResults', null);
 
       const options = await this.requestOptions('networks', this.value.project);
       const content = this.mapPathOptionsToContent(options);
-
-      this.resetValueIfNecessary('networkNames', content, options);
 
       set(this, 'networkNamesResults', content);
     },
@@ -372,27 +286,20 @@ export default {
               :suffix="t('suffix.mib')" :disabled="isDisabled" />
           </div>
           <div class="col span-6" data-testid="storageName">
-            <LabeledSelect v-model="value.storageName" :loading="storageNamesLoading" :mode="mode" :options="storageNames"
-              :label="t('cluster.machineConfig.incus.storagePool')" :disabled="isDisabled" :tooltip="value.storageName" />
+            <LabeledSelect v-model="value.storageName" :loading="storageNamesLoading" :mode="mode"
+              :options="storageNames" :label="t('cluster.machineConfig.incus.storagePool')" :disabled="isDisabled"
+              :tooltip="value.storageName" />
           </div>
         </div>
         <div class="row mt-10">
           <div class="col span-6" data-testid="networkName">
-            <LabeledSelect v-model="value.networkName" :loading="networkNamesLoading" :mode="mode" :options="networkNames"
-              :label="t('cluster.machineConfig.incus.network')" :disabled="isDisabled" :tooltip="value.networkName" />
+            <LabeledSelect v-model="value.networkName" :loading="networkNamesLoading" :mode="mode"
+              :options="networkNames" :label="t('cluster.machineConfig.incus.network')" :disabled="isDisabled"
+              :tooltip="value.networkName" />
           </div>
           <div class="col span-6" data-testid="profile">
             <LabeledSelect v-model="value.profile" :loading="profilesLoading" :mode="mode" :options="profiles"
               :label="t('cluster.machineConfig.incus.profile')" :disabled="isDisabled" :tooltip="value.profile" />
-          </div>
-        </div>
-        <div class="row mt-10">
-          <div class="col span-12">
-            <label class="text-label mt-0">{{ t('cluster.machineConfig.incus.cloudInit')
-              }}</label>
-            <YamlEditor ref="yaml-additional" v-model="value.cloudinitUserdata"
-              :editor-mode="mode === 'view' ? 'VIEW_CODE' : 'EDIT_CODE'" :disabled="isDisabled"
-              initial-yaml-values="# Additional Manifest YAML" class="yaml-editor" />
           </div>
         </div>
       </div>
